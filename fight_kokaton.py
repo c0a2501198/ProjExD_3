@@ -166,7 +166,7 @@ def main():
     bg_img = pg.image.load("fig/pg_bg.jpg")
     bird = Bird((300, 200))
     bombs = [Bomb((255, 0, 0), 10) for _ in range(NUM_OF_BOMBS)]
-    beam = None  # ゲーム初期化時にはビームは存在しない
+    beams = []  # 複数のビームを管理するためのリスト
     score = Score()
     clock = pg.time.Clock()
     tmr = 0
@@ -176,7 +176,7 @@ def main():
                 return
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 # スペースキー押下でBeamクラスのインスタンス生成
-                beam = Beam(bird)            
+                beams.append(Beam(bird))            
         screen.blit(bg_img, [0, 0])
         
         for bomb in bombs:
@@ -190,20 +190,29 @@ def main():
                 time.sleep(1)
                 return
 
-        for i, bomb in enumerate(bombs):
-            if beam is not None:
+        for i, beam in enumerate(beams):
+            if beam is None:
+                continue
+
+            for j, bomb in enumerate(bombs):
+                if bomb is None:
+                    continue
+
                 if beam.rct.colliderect(bomb.rct): #ビームと爆弾の衝突判定
-                    beam = None
-                    score.value +=1
-                    bombs[i] = None
+                    beams[i] = None # 当たったビームを消す
+                    score.value +=1 # 打ち落とした爆弾数を加算
+                    bombs[j] = None # 当たった爆弾を消す
                     bird.change_img(6, screen)  #よろこびエフェクト
-                    score.update(screen)
+                    score.update(screen) 
                     pg.display.update()
-        bombs = [bomb for bomb in bombs if bomb is not None] # Noneを取り除く          
+                    break
+        beams = [beam for beam in beams if beam is not None]  # Noneのビームを削除
+        bombs = [bomb for bomb in bombs if bomb is not None] # Noneを取り除く
+        beams = [beam for beam in beams if check_bound(beam.rct) == (True, True)] # 画面外のビームを削除        
 
         key_lst = pg.key.get_pressed()
         bird.update(key_lst, screen)
-        if beam is not None: # beamが出現していたら
+        for beam in beams: # すべてのビームを更新・描画
             beam.update(screen)
         for bomb in bombs:   
             bomb.update(screen)
